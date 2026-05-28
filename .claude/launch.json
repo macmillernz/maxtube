@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "maxtube-ui",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ng", "serve", "--port", "4200"],
+      "cwd": "/Users/glennm/Documents/GitHub/maxtube/ui",
+      "port": 4200
+    }
+  ]
+}

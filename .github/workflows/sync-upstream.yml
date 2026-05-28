@@ -1,0 +1,51 @@
+name: Sync upstream metube
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # daily at 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: git remote add upstream https://github.com/alexta69/metube.git || true && git fetch upstream master
+
+      - name: Merge upstream into main
+        run: |
+          git checkout main
+          if git merge upstream/master --no-edit -m "chore: sync upstream metube"; then
+            git push origin main
+            echo "SYNCED=true" >> "$GITHUB_ENV"
+          else
+            echo "Merge conflict — manual resolution required"
+            git merge --abort
+            echo "SYNCED=false" >> "$GITHUB_ENV"
+            exit 1
+          fi
+
+      - name: Trigger auto-merge into custom
+        if: env.SYNCED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'merge-main-into-custom.yml',
+              ref: 'main',
+            });

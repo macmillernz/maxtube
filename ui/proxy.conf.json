@@ -1,0 +1,19 @@
+{
+  "/api": {
+    "target": "http://localhost:8081",
+    "secure": false
+  },
+  "/socket.io": {
+    "target": "http://localhost:8081",
+    "secure": false,
+    "ws": true
+  },
+  "/download": {
+    "target": "http://localhost:8081",
+    "secure": false
+  },
+  "/audio_download": {
+    "target": "http://localhost:8081",
+    "secure": false
+  }
+}

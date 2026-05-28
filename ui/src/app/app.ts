@@ -91,6 +91,9 @@ export class App implements AfterViewInit, OnInit, OnDestroy {
   addInProgress = false;
   cancelRequested = false;
   subscribeInProgress = false;
+  playerDownload: Download | null = null;
+  playerUrl = '';
+  playerIsVideo = true;
   checkIntervalMinutes = 60;
   titleRegex = '';
   skipSubscriberOnly = false;
@@ -1058,22 +1061,49 @@ export class App implements AfterViewInit, OnInit, OnDestroy {
   }
 
   addDownload(overrides: Partial<AddDownloadPayload> = {}) {
-    const payload = this.buildAddPayload(overrides);
+    const rawUrl = overrides.url ?? this.addUrl;
+    const urls = rawUrl.split(',').map(u => u.trim()).filter(u => u.length > 0);
 
-    // Validate chapter template if chapter splitting is enabled
-    if (payload.splitByChapters && !payload.chapterTemplate.includes('%(section_number)')) {
+    if (urls.length === 0) return;
+
+    // Validate once using the first URL
+    const firstPayload = this.buildAddPayload({ ...overrides, url: urls[0] });
+    if (firstPayload.splitByChapters && !firstPayload.chapterTemplate.includes('%(section_number)')) {
       alert('Chapter template must include %(section_number)');
       return;
     }
-    if (!this.validateYtdlOptionsOverrides(payload.ytdlOptionsOverrides)) {
+    if (!this.validateYtdlOptionsOverrides(firstPayload.ytdlOptionsOverrides)) {
       return;
     }
 
-    console.debug('Downloading:', payload);
+    if (urls.length > 1) {
+      this.addInProgress = true;
+      this.cancelRequested = false;
+      from(urls).pipe(
+        mergeMap(
+          url => this.downloads.add(this.buildAddPayload({ ...overrides, url })).pipe(
+            tap((status: Status) => {
+              if (status.status === 'error' && !this.cancelRequested) {
+                console.error(`Error adding URL: ${status.msg}`);
+              }
+            }),
+          ),
+          App.BATCH_IMPORT_CONCURRENCY,
+        ),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.addUrl = '';
+          this.resetAddState();
+        }),
+      ).subscribe();
+      return;
+    }
+
+    console.debug('Downloading:', firstPayload);
     this.addInProgress = true;
     this.cancelRequested = false;
     this.addRequestSub?.unsubscribe();
-    this.addRequestSub = this.downloads.add(payload).subscribe((status: Status) => {
+    this.addRequestSub = this.downloads.add(firstPayload).subscribe((status: Status) => {
       if (status.status === 'error' && !this.cancelRequested) {
         alert(`Error adding URL: ${status.msg}`);
       } else if (status.status !== 'error') {
@@ -1174,6 +1204,19 @@ export class App implements AfterViewInit, OnInit, OnDestroy {
         document.body.removeChild(link);
       }
     });
+  }
+
+  playDownload(download: Download) {
+    this.playerDownload = download;
+    this.playerUrl = this.buildDownloadLink(download);
+    this.playerIsVideo = download.download_type !== 'audio' && !download.filename?.endsWith('.mp3');
+    this.cdr.markForCheck();
+  }
+
+  closePlayer() {
+    this.playerDownload = null;
+    this.playerUrl = '';
+    this.cdr.markForCheck();
   }
 
   buildDownloadLink(download: Download) {

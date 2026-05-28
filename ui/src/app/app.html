@@ -135,7 +135,7 @@
               autocomplete="off"
               spellcheck="false"
               class="form-control form-control-lg"
-              placeholder="Enter video, channel, or playlist URL"
+              placeholder="Enter URL or paste multiple URLs separated by commas"
               [(ngModel)]="addUrl"
               [ngModelOptions]="{standalone: true}"
               [disabled]="addInProgress || subscribeInProgress || downloads.loading">
@@ -150,7 +150,7 @@
               autocomplete="off"
               spellcheck="false"
               class="form-control form-control-lg"
-              placeholder="Enter video, channel, or playlist URL"
+              placeholder="Enter URL or paste multiple URLs separated by commas"
               [(ngModel)]="addUrl"
               [ngModelOptions]="{standalone: true}"
               [disabled]="addInProgress || subscribeInProgress || downloads.loading">
@@ -852,6 +852,7 @@
                   <button type="button" class="btn btn-link" [attr.aria-label]="'Retry download for ' + entry[1].title" (click)="retryDownload(entry[0], entry[1])"><fa-icon [icon]="faRedoAlt" /></button>
                 }
                 @if (entry[1].filename) {
+                  <button type="button" class="btn btn-link" [attr.aria-label]="'Play ' + entry[1].title" (click)="playDownload(entry[1])"><fa-icon [icon]="faPlay" /></button>
                   <a href="{{buildDownloadLink(entry[1])}}" download class="btn btn-link" [attr.aria-label]="'Download result file for ' + entry[1].title"><fa-icon [icon]="faDownload" /></a>
                 }
                 <a href="{{entry[1].url}}" target="_blank" class="btn btn-link" [attr.aria-label]="'Open source URL for ' + entry[1].title"><fa-icon [icon]="faExternalLinkAlt" /></a>
@@ -1074,3 +1075,24 @@
     }
   </div>
 </footer>
+
+@if (playerDownload) {
+  <div class="player-bar">
+    <div class="player-bar-inner container-fluid">
+      <div class="player-meta">
+        <fa-icon [icon]="faPlay" class="me-2 text-primary" />
+        <span class="player-title" [title]="playerDownload.title">{{ playerDownload.title }}</span>
+      </div>
+      <div class="player-media">
+        @if (playerIsVideo) {
+          <video [src]="playerUrl" controls autoplay class="player-video"></video>
+        } @else {
+          <audio [src]="playerUrl" controls autoplay class="player-audio"></audio>
+        }
+      </div>
+      <button type="button" class="btn btn-sm btn-link player-close" aria-label="Close player" (click)="closePlayer()">
+        <fa-icon [icon]="faTimesCircle" />
+      </button>
+    </div>
+  </div>
+}
